@@ -1,0 +1,33 @@
+name: Instagram AI agent
+
+on:
+  schedule:
+    - cron: "5 * * * *"   # every hour (checks the Sheet for posts that are due)
+  workflow_dispatch:       # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency: instagram-agent
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Post next due item
+        env:
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python post.py
+      - name: Save log
+        run: |
+          git config user.name "ig-agent"
+          git config user.email "ig-agent@users.noreply.github.com"
+          git add posted.json
+          git diff --cached --quiet || (git commit -m "Log Instagram post" && git push)
